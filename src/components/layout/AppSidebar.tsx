@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
+  Package,
   Store,
   Users,
   CheckSquare,
@@ -22,6 +23,7 @@ import {
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Produtos", url: "/products", icon: Package },
   { title: "Lojas", url: "/stores", icon: Store },
   { title: "Vendedores", url: "/vendors", icon: Users },
   { title: "Validações", url: "/validations", icon: CheckSquare },
