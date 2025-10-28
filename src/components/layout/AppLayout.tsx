@@ -14,8 +14,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-6">
             <SidebarTrigger />
             <div className="flex-1" />
-            <div className="text-sm text-muted-foreground">
-              Sell-out Tracker
+            <div className="text-sm font-semibold text-primary">
+              Cashin | Sell-out Tracker
             </div>
           </header>
           <main className="flex-1 p-6 bg-background">
