@@ -37,12 +37,14 @@ export default function Stores() {
   ]);
 
   const handleAddStore = (store: Omit<Store, "id" | "monthlyRevenue">) => {
+    const newStoreId = `LJ${String(stores.length + 1).padStart(3, "0")}`;
     const newStore = {
       ...store,
-      id: `LJ${String(stores.length + 1).padStart(3, "0")}`,
+      id: newStoreId,
       monthlyRevenue: 0,
     };
     setStores([...stores, newStore]);
+    return newStoreId;
   };
 
   return (

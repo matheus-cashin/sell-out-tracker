@@ -18,12 +18,13 @@ interface AddStoreDialogProps {
     name: string;
     region: string;
     address: string;
-  }) => void;
+  }) => string;
 }
 
 export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
   const [open, setOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [lastAddedStore, setLastAddedStore] = useState<{ id: string; name: string } | null>(null);
   const [name, setName] = useState("");
   const [region, setRegion] = useState("");
   const [address, setAddress] = useState("");
@@ -35,11 +36,14 @@ export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
       return;
     }
 
-    onAddStore({
+    const storeData = {
       name,
       region,
       address,
-    });
+    };
+
+    const newStoreId = onAddStore(storeData);
+    setLastAddedStore({ id: newStoreId, name });
 
     setName("");
     setRegion("");
@@ -104,7 +108,14 @@ export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
       </DialogContent>
     </Dialog>
 
-    <StoreSuccessDialog open={successOpen} onOpenChange={setSuccessOpen} />
+    {lastAddedStore && (
+      <StoreSuccessDialog 
+        open={successOpen} 
+        onOpenChange={setSuccessOpen}
+        storeId={lastAddedStore.id}
+        storeName={lastAddedStore.name}
+      />
+    )}
     </>
   );
 }

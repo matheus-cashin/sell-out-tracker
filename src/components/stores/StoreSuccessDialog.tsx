@@ -1,4 +1,5 @@
 import { Users, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +12,18 @@ import { Button } from "@/components/ui/button";
 interface StoreSuccessDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  storeId: string;
+  storeName: string;
 }
 
-export function StoreSuccessDialog({ open, onOpenChange }: StoreSuccessDialogProps) {
+export function StoreSuccessDialog({ open, onOpenChange, storeId, storeName }: StoreSuccessDialogProps) {
+  const navigate = useNavigate();
+
+  const handleAddVendors = () => {
+    onOpenChange(false);
+    navigate("/vendors", { state: { openAddVendor: true, storeId, storeName } });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
@@ -33,7 +43,7 @@ export function StoreSuccessDialog({ open, onOpenChange }: StoreSuccessDialogPro
           <Button onClick={() => onOpenChange(false)}>
             Concluir
           </Button>
-          <Button variant="outline" disabled>
+          <Button variant="outline" onClick={handleAddVendors}>
             <Users className="h-4 w-4" />
             Cadastrar Vendedores
           </Button>

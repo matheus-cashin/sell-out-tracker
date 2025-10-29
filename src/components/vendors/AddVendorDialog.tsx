@@ -34,15 +34,17 @@ interface AddVendorDialogProps {
     email: string;
     storeId: string;
   }) => void;
+  initialOpen?: boolean;
+  preSelectedStoreId?: string;
 }
 
-export function AddVendorDialog({ stores, onAddVendor }: AddVendorDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preSelectedStoreId = "" }: AddVendorDialogProps) {
+  const [open, setOpen] = useState(initialOpen);
   const [name, setName] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [storeId, setStoreId] = useState("");
+  const [storeId, setStoreId] = useState(preSelectedStoreId);
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {

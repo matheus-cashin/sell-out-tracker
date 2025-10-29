@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { VendorsHeader } from "@/components/vendors/VendorsHeader";
 import { VendorsList } from "@/components/vendors/VendorsList";
 import { AddVendorDialog } from "@/components/vendors/AddVendorDialog";
@@ -13,6 +14,7 @@ export interface Vendor {
 }
 
 export default function Vendors() {
+  const location = useLocation();
   const [vendors, setVendors] = useState<Vendor[]>([
     {
       id: "V001",
@@ -58,6 +60,21 @@ export default function Vendors() {
     { id: "LJ003", name: "Loja Zona Sul" },
   ];
 
+  // Estado para controlar a abertura do modal vindo de outra página
+  const [initialModalOpen, setInitialModalOpen] = useState(false);
+  const [preSelectedStore, setPreSelectedStore] = useState("");
+
+  useEffect(() => {
+    if (location.state?.openAddVendor) {
+      setInitialModalOpen(true);
+      if (location.state?.storeId) {
+        setPreSelectedStore(location.state.storeId);
+      }
+      // Limpar o state para evitar reabrir o modal ao voltar
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
   const handleAddVendor = (vendorData: {
     name: string;
     cpfCnpj: string;
@@ -86,7 +103,12 @@ export default function Vendors() {
             Acompanhe o desempenho dos vendedores
           </p>
         </div>
-        <AddVendorDialog stores={stores} onAddVendor={handleAddVendor} />
+        <AddVendorDialog 
+          stores={stores} 
+          onAddVendor={handleAddVendor}
+          initialOpen={initialModalOpen}
+          preSelectedStoreId={preSelectedStore}
+        />
       </div>
 
       <VendorsHeader 
