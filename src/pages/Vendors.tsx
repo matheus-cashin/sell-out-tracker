@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { VendorsHeader } from "@/components/vendors/VendorsHeader";
 import { VendorsList } from "@/components/vendors/VendorsList";
+import { AddVendorDialog } from "@/components/vendors/AddVendorDialog";
 
 export interface Vendor {
   id: string;
@@ -12,7 +13,7 @@ export interface Vendor {
 }
 
 export default function Vendors() {
-  const [vendors] = useState<Vendor[]>([
+  const [vendors, setVendors] = useState<Vendor[]>([
     {
       id: "V001",
       name: "João Silva",
@@ -50,6 +51,32 @@ export default function Vendors() {
   const totalRejected = vendors.reduce((acc, v) => acc + v.receiptsRejected, 0);
   const totalSales = vendors.reduce((acc, v) => acc + v.monthlySales, 0);
 
+  // Lojas disponíveis para vincular vendedores
+  const stores = [
+    { id: "LJ001", name: "Loja Centro" },
+    { id: "LJ002", name: "Loja Zona Norte" },
+    { id: "LJ003", name: "Loja Zona Sul" },
+  ];
+
+  const handleAddVendor = (vendorData: {
+    name: string;
+    cpfCnpj: string;
+    phone: string;
+    email: string;
+    storeId: string;
+  }) => {
+    const store = stores.find((s) => s.id === vendorData.storeId);
+    const newVendor: Vendor = {
+      id: `V${String(vendors.length + 1).padStart(3, "0")}`,
+      name: vendorData.name,
+      store: store?.name || "",
+      receiptsSubmitted: 0,
+      receiptsRejected: 0,
+      monthlySales: 0,
+    };
+    setVendors([...vendors, newVendor]);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -59,6 +86,7 @@ export default function Vendors() {
             Acompanhe o desempenho dos vendedores
           </p>
         </div>
+        <AddVendorDialog stores={stores} onAddVendor={handleAddVendor} />
       </div>
 
       <VendorsHeader 
