@@ -1,18 +1,29 @@
+import { useState } from "react";
 import { TrendingUp, DollarSign, Package, AlertCircle } from "lucide-react";
+import { DateRange } from "react-day-picker";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { SalesChart } from "@/components/dashboard/SalesChart";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { ValidationPanel } from "@/components/dashboard/ValidationPanel";
 import { ProductPerformanceList } from "@/components/dashboard/ProductPerformanceList";
+import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 
 export default function Dashboard() {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    to: new Date(),
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Visão geral das vendas e validações
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Visão geral das vendas e validações
+          </p>
+        </div>
+        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
