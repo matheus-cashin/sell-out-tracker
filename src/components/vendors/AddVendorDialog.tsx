@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import * as React from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,7 +8,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -47,6 +47,16 @@ export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preS
   const [storeId, setStoreId] = useState(preSelectedStoreId);
   const { toast } = useToast();
 
+  // Atualizar quando initialOpen mudar
+  React.useEffect(() => {
+    if (initialOpen) {
+      setOpen(true);
+      if (preSelectedStoreId) {
+        setStoreId(preSelectedStoreId);
+      }
+    }
+  }, [initialOpen, preSelectedStoreId]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -81,13 +91,13 @@ export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preS
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4" />
-          Adicionar Vendedor
-        </Button>
-      </DialogTrigger>
+    <>
+      <Button onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4" />
+        Adicionar Vendedor
+      </Button>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Vendedor</DialogTitle>
@@ -161,5 +171,6 @@ export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preS
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

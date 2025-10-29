@@ -70,10 +70,8 @@ export default function Vendors() {
       if (location.state?.storeId) {
         setPreSelectedStore(location.state.storeId);
       }
-      // Limpar o state para evitar reabrir o modal ao voltar
-      window.history.replaceState({}, document.title);
     }
-  }, [location]);
+  }, [location.state]);
 
   const handleAddVendor = (vendorData: {
     name: string;
