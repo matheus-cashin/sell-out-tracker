@@ -9,6 +9,7 @@ import Products from "./pages/Products";
 import Stores from "./pages/Stores";
 import Vendors from "./pages/Vendors";
 import Validations from "./pages/Validations";
+import Settings from "./pages/Settings";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -27,7 +28,7 @@ const App = () => (
           <Route path="/vendors" element={<AppLayout><Vendors /></AppLayout>} />
           <Route path="/validations" element={<AppLayout><Validations /></AppLayout>} />
           <Route path="/reports" element={<AppLayout><ComingSoon /></AppLayout>} />
-          <Route path="/settings" element={<AppLayout><ComingSoon /></AppLayout>} />
+          <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
