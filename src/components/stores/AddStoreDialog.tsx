@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Users } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,58 +11,46 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { StoreSuccessDialog } from "./StoreSuccessDialog";
 
 interface AddStoreDialogProps {
   onAddStore: (store: {
     name: string;
     region: string;
-    monthlyRevenue: number;
     address: string;
   }) => void;
 }
 
 export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
   const [open, setOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
   const [name, setName] = useState("");
   const [region, setRegion] = useState("");
-  const [revenue, setRevenue] = useState("");
   const [address, setAddress] = useState("");
-  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !region || !revenue || !address) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos.",
-        variant: "destructive",
-      });
+    if (!name || !region || !address) {
       return;
     }
 
     onAddStore({
       name,
       region,
-      monthlyRevenue: parseFloat(revenue),
       address,
-    });
-
-    toast({
-      title: "Loja cadastrada",
-      description: "A loja foi adicionada com sucesso.",
     });
 
     setName("");
     setRegion("");
-    setRevenue("");
     setAddress("");
     setOpen(false);
+    setSuccessOpen(true);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4" />
@@ -98,17 +86,6 @@ export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="revenue">Faturamento Mensal (R$)</Label>
-            <Input
-              id="revenue"
-              type="number"
-              placeholder="Ex: 125000"
-              value={revenue}
-              onChange={(e) => setRevenue(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="address">Endereço</Label>
             <Input
               id="address"
@@ -118,23 +95,16 @@ export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
             />
           </div>
 
-          <div className="flex flex-col gap-3 pt-4">
+          <div className="pt-4">
             <Button type="submit" className="w-full">
               Cadastrar Loja
-            </Button>
-            
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              disabled
-            >
-              <Users className="h-4 w-4" />
-              Incluir Vendedores
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
+
+    <StoreSuccessDialog open={successOpen} onOpenChange={setSuccessOpen} />
+    </>
   );
 }
