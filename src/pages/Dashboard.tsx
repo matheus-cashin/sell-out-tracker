@@ -1,7 +1,9 @@
 import { TrendingUp, DollarSign, Package, AlertCircle } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
+import { SalesChart } from "@/components/dashboard/SalesChart";
+import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { ValidationPanel } from "@/components/dashboard/ValidationPanel";
+import { ProductPerformanceList } from "@/components/dashboard/ProductPerformanceList";
 
 export default function Dashboard() {
   return (
@@ -43,8 +45,13 @@ export default function Dashboard() {
         />
       </div>
 
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+        <SalesChart />
+        <RevenueChart />
+      </div>
+
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <PerformanceChart />
+        <ProductPerformanceList />
         <ValidationPanel />
       </div>
     </div>
