@@ -48,14 +48,9 @@ export function AppSidebar() {
       <SidebarContent>
         <div className="p-6 pb-4">
           {!isCollapsed && (
-            <>
-              <h2 className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Sell-out Tracker
-              </h2>
-              <p className="text-xs mt-1" style={{ color: 'hsl(300, 100%, 50%)' }}>
-                powered by Cashin
-              </p>
-            </>
+            <h2 className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Sell-out Tracker
+            </h2>
           )}
         </div>
 
