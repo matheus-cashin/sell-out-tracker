@@ -38,6 +38,183 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          sector: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          sector: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          sector?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      receipt_products: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          receipt_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          receipt_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          receipt_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_products_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipts: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          observation: string | null
+          products_count: number | null
+          receipt_date: string
+          receipt_number: string
+          rejection_reason: string | null
+          status: string
+          store_id: string
+          total_value: number
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          observation?: string | null
+          products_count?: number | null
+          receipt_date: string
+          receipt_number: string
+          rejection_reason?: string | null
+          status?: string
+          store_id: string
+          total_value: number
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          observation?: string | null
+          products_count?: number | null
+          receipt_date?: string
+          receipt_number?: string
+          rejection_reason?: string | null
+          status?: string
+          store_id?: string
+          total_value?: number
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          monthly_revenue: number | null
+          name: string
+          region: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          monthly_revenue?: number | null
+          name: string
+          region: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          monthly_revenue?: number | null
+          name?: string
+          region?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -61,6 +238,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vendors: {
+        Row: {
+          cpf_cnpj: string | null
+          created_at: string
+          email: string | null
+          id: string
+          monthly_sales: number | null
+          name: string
+          phone: string | null
+          receipts_rejected: number | null
+          receipts_submitted: number | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          monthly_sales?: number | null
+          name: string
+          phone?: string | null
+          receipts_rejected?: number | null
+          receipts_submitted?: number | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          monthly_sales?: number | null
+          name?: string
+          phone?: string | null
+          receipts_rejected?: number | null
+          receipts_submitted?: number | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
