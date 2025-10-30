@@ -1,21 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProductsHeader } from "@/components/products/ProductsHeader";
 import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { ProductsList } from "@/components/products/ProductsList";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-// Mock data - será substituído por dados reais do backend
-const mockProducts = Array.from({ length: 45 }, (_, i) => ({
-  id: `prod-${i + 1}`,
-  name: `Produto ${i + 1}`,
-  description: `Descrição do produto ${i + 1}`,
-  sector: ["Medicamentos", "Suplementos", "Veterinário"][i % 3],
-  image: "/placeholder.svg",
-  active: i % 5 !== 0,
-}));
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  sector: string;
+  image: string;
+  active: boolean;
+}
 
 export default function Products() {
-  const [products] = useState(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+
+      const formattedProducts = data.map((product) => ({
+        id: product.id,
+        name: product.name,
+        description: product.description || "",
+        sector: product.sector,
+        image: product.image_url || "",
+        active: product.active,
+      }));
+
+      setProducts(formattedProducts);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      toast({
+        title: "Erro ao carregar produtos",
+        description: "Não foi possível carregar os produtos.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const totalProducts = products.length;
   const inactiveProducts = products.filter(p => !p.active).length;

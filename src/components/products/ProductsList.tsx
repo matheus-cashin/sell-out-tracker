@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MoreVertical, Edit, Trash2 } from "lucide-react";
+import defaultProductIcon from "@/assets/default-product-icon.png";
 import {
   Table,
   TableBody,
@@ -68,7 +69,7 @@ export function ProductsList({ products }: ProductsListProps) {
               <TableRow key={product.id}>
                 <TableCell>
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={product.image} alt={product.name} />
+                    <AvatarImage src={product.image || defaultProductIcon} alt={product.name} />
                     <AvatarFallback>{product.name.substring(0, 2)}</AvatarFallback>
                   </Avatar>
                 </TableCell>
