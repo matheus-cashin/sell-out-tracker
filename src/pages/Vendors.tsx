@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { VendorsHeader } from "@/components/vendors/VendorsHeader";
 import { VendorsList } from "@/components/vendors/VendorsList";
 import { AddVendorDialog } from "@/components/vendors/AddVendorDialog";
+import { useToast } from "@/hooks/use-toast";
 
 export interface Vendor {
   id: string;
@@ -15,50 +18,54 @@ export interface Vendor {
 
 export default function Vendors() {
   const location = useLocation();
-  const [vendors, setVendors] = useState<Vendor[]>([
-    {
-      id: "V001",
-      name: "João Silva",
-      store: "Loja Centro",
-      receiptsSubmitted: 45,
-      receiptsRejected: 3,
-      monthlySales: 28500,
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: vendors = [], isLoading } = useQuery({
+    queryKey: ['vendors'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select(`
+          id,
+          name,
+          receipts_submitted,
+          receipts_rejected,
+          monthly_sales,
+          stores (
+            name
+          )
+        `)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      return data.map(v => ({
+        id: v.id,
+        name: v.name,
+        store: v.stores?.name || '',
+        receiptsSubmitted: v.receipts_submitted || 0,
+        receiptsRejected: v.receipts_rejected || 0,
+        monthlySales: Number(v.monthly_sales) || 0,
+      })) as Vendor[];
     },
-    {
-      id: "V002",
-      name: "Maria Santos",
-      store: "Loja Zona Norte",
-      receiptsSubmitted: 52,
-      receiptsRejected: 1,
-      monthlySales: 35200,
+  });
+
+  const { data: stores = [] } = useQuery({
+    queryKey: ['stores'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stores')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
     },
-    {
-      id: "V003",
-      name: "Pedro Costa",
-      store: "Loja Zona Sul",
-      receiptsSubmitted: 38,
-      receiptsRejected: 5,
-      monthlySales: 22100,
-    },
-    {
-      id: "V004",
-      name: "Ana Oliveira",
-      store: "Loja Centro",
-      receiptsSubmitted: 61,
-      receiptsRejected: 2,
-      monthlySales: 42300,
-    },
-  ]);
+  });
 
   const totalRejected = vendors.reduce((acc, v) => acc + v.receiptsRejected, 0);
   const totalSales = vendors.reduce((acc, v) => acc + v.monthlySales, 0);
-
-  // Lojas disponíveis para vincular vendedores
-  const stores = [
-    { id: "LJ001", name: "Loja Centro" },
-    { id: "LJ002", name: "Loja Zona Norte" },
-    { id: "LJ003", name: "Loja Zona Sul" },
-  ];
 
   // Estado para controlar a abertura do modal vindo de outra página
   const [initialModalOpen, setInitialModalOpen] = useState(false);
@@ -73,6 +80,48 @@ export default function Vendors() {
     }
   }, [location.state]);
 
+  const addVendorMutation = useMutation({
+    mutationFn: async (vendorData: {
+      name: string;
+      cpfCnpj: string;
+      phone: string;
+      email: string;
+      storeId: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert([{
+          name: vendorData.name,
+          cpf_cnpj: vendorData.cpfCnpj,
+          phone: vendorData.phone,
+          email: vendorData.email,
+          store_id: vendorData.storeId,
+          receipts_submitted: 0,
+          receipts_rejected: 0,
+          monthly_sales: 0,
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      toast({
+        title: "Vendedor cadastrado",
+        description: "O vendedor foi adicionado com sucesso",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível cadastrar o vendedor",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddVendor = (vendorData: {
     name: string;
     cpfCnpj: string;
@@ -80,16 +129,7 @@ export default function Vendors() {
     email: string;
     storeId: string;
   }) => {
-    const store = stores.find((s) => s.id === vendorData.storeId);
-    const newVendor: Vendor = {
-      id: `V${String(vendors.length + 1).padStart(3, "0")}`,
-      name: vendorData.name,
-      store: store?.name || "",
-      receiptsSubmitted: 0,
-      receiptsRejected: 0,
-      monthlySales: 0,
-    };
-    setVendors([...vendors, newVendor]);
+    addVendorMutation.mutate(vendorData);
   };
 
   return (
@@ -114,7 +154,11 @@ export default function Vendors() {
         totalRejected={totalRejected}
         totalSales={totalSales}
       />
-      <VendorsList vendors={vendors} />
+      {isLoading ? (
+        <div className="text-center py-8">Carregando vendedores...</div>
+      ) : (
+        <VendorsList vendors={vendors} />
+      )}
     </div>
   );
 }

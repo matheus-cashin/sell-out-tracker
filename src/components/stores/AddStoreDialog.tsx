@@ -18,7 +18,7 @@ interface AddStoreDialogProps {
     name: string;
     region: string;
     address: string;
-  }) => string;
+  }) => void;
 }
 
 export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
@@ -42,8 +42,8 @@ export function AddStoreDialog({ onAddStore }: AddStoreDialogProps) {
       address,
     };
 
-    const newStoreId = onAddStore(storeData);
-    setLastAddedStore({ id: newStoreId, name });
+    onAddStore(storeData);
+    setLastAddedStore({ id: "", name });
 
     setName("");
     setRegion("");
