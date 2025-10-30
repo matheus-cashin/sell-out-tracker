@@ -22,6 +22,16 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
 interface Store {
@@ -34,12 +44,14 @@ interface Store {
 
 interface StoresListProps {
   stores: Store[];
+  onDeleteStore: (storeId: string) => Promise<void>;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function StoresList({ stores }: StoresListProps) {
+export function StoresList({ stores, onDeleteStore }: StoresListProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
 
   const totalPages = Math.ceil(stores.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -56,6 +68,13 @@ export function StoresList({ stores }: StoresListProps) {
   const handleOpenMap = (address: string) => {
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     window.open(mapsUrl, "_blank");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (storeToDelete) {
+      await onDeleteStore(storeToDelete.id);
+      setStoreToDelete(null);
+    }
   };
 
   return (
@@ -101,7 +120,10 @@ export function StoresList({ stores }: StoresListProps) {
                         <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={() => setStoreToDelete(store)}
+                      >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Excluir
                       </DropdownMenuItem>
@@ -143,6 +165,24 @@ export function StoresList({ stores }: StoresListProps) {
           </PaginationContent>
         </Pagination>
       )}
+
+      <AlertDialog open={!!storeToDelete} onOpenChange={(open) => !open && setStoreToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a loja <strong>{storeToDelete?.name}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

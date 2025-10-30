@@ -83,6 +83,31 @@ export default function Stores() {
     }
   };
 
+  const handleDeleteStore = async (storeId: string) => {
+    try {
+      const { error } = await supabase
+        .from("stores")
+        .delete()
+        .eq("id", storeId);
+
+      if (error) throw error;
+
+      await fetchStores();
+      
+      toast({
+        title: "Loja excluída",
+        description: "A loja foi removida com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error deleting store:", error);
+      toast({
+        title: "Erro ao excluir loja",
+        description: "Não foi possível excluir a loja.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -96,7 +121,7 @@ export default function Stores() {
       </div>
 
       <StoresHeader totalStores={stores.length} />
-      <StoresList stores={stores} />
+      <StoresList stores={stores} onDeleteStore={handleDeleteStore} />
     </div>
   );
 }
