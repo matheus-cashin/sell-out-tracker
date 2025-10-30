@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { VendorsHeader } from "@/components/vendors/VendorsHeader";
 import { VendorsList } from "@/components/vendors/VendorsList";
 import { AddVendorDialog } from "@/components/vendors/AddVendorDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Vendor {
@@ -16,60 +15,25 @@ export interface Vendor {
   monthlySales: number;
 }
 
+interface Store {
+  id: string;
+  name: string;
+}
+
 export default function Vendors() {
   const location = useLocation();
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const { data: vendors = [], isLoading } = useQuery({
-    queryKey: ['vendors'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendors')
-        .select(`
-          id,
-          name,
-          receipts_submitted,
-          receipts_rejected,
-          monthly_sales,
-          stores (
-            name
-          )
-        `)
-        .order('created_at', { ascending: true });
-      
-      if (error) throw error;
-      
-      return data.map(v => ({
-        id: v.id,
-        name: v.name,
-        store: v.stores?.name || '',
-        receiptsSubmitted: v.receipts_submitted || 0,
-        receiptsRejected: v.receipts_rejected || 0,
-        monthlySales: Number(v.monthly_sales) || 0,
-      })) as Vendor[];
-    },
-  });
-
-  const { data: stores = [] } = useQuery({
-    queryKey: ['stores'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('id, name')
-        .order('name');
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const totalRejected = vendors.reduce((acc, v) => acc + v.receiptsRejected, 0);
-  const totalSales = vendors.reduce((acc, v) => acc + v.monthlySales, 0);
 
   // Estado para controlar a abertura do modal vindo de outra página
   const [initialModalOpen, setInitialModalOpen] = useState(false);
   const [preSelectedStore, setPreSelectedStore] = useState("");
+
+  useEffect(() => {
+    fetchStores();
+    fetchVendors();
+  }, []);
 
   useEffect(() => {
     if (location.state?.openAddVendor) {
@@ -80,17 +44,66 @@ export default function Vendors() {
     }
   }, [location.state]);
 
-  const addVendorMutation = useMutation({
-    mutationFn: async (vendorData: {
-      name: string;
-      cpfCnpj: string;
-      phone: string;
-      email: string;
-      storeId: string;
-    }) => {
+  const fetchStores = async () => {
+    try {
       const { data, error } = await supabase
-        .from('vendors')
-        .insert([{
+        .from("stores")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+      setStores(data || []);
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+    }
+  };
+
+  const fetchVendors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vendors")
+        .select(`
+          *,
+          stores (name)
+        `)
+        .order("name");
+
+      if (error) throw error;
+
+      const formattedVendors = data.map((vendor) => ({
+        id: vendor.id,
+        name: vendor.name,
+        store: vendor.stores?.name || "",
+        receiptsSubmitted: vendor.receipts_submitted || 0,
+        receiptsRejected: vendor.receipts_rejected || 0,
+        monthlySales: Number(vendor.monthly_sales) || 0,
+      }));
+
+      setVendors(formattedVendors);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+      toast({
+        title: "Erro ao carregar vendedores",
+        description: "Não foi possível carregar os vendedores.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const totalRejected = vendors.reduce((acc, v) => acc + v.receiptsRejected, 0);
+  const totalSales = vendors.reduce((acc, v) => acc + v.monthlySales, 0);
+
+  const handleAddVendor = async (vendorData: {
+    name: string;
+    cpfCnpj: string;
+    phone: string;
+    email: string;
+    storeId: string;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from("vendors")
+        .insert({
           name: vendorData.name,
           cpf_cnpj: vendorData.cpfCnpj,
           phone: vendorData.phone,
@@ -99,37 +112,24 @@ export default function Vendors() {
           receipts_submitted: 0,
           receipts_rejected: 0,
           monthly_sales: 0,
-        }])
-        .select()
-        .single();
-      
+        });
+
       if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+
+      await fetchVendors();
+      
       toast({
         title: "Vendedor cadastrado",
-        description: "O vendedor foi adicionado com sucesso",
+        description: "O vendedor foi adicionado com sucesso.",
       });
-    },
-    onError: () => {
+    } catch (error) {
+      console.error("Error adding vendor:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível cadastrar o vendedor",
+        title: "Erro ao cadastrar vendedor",
+        description: "Não foi possível cadastrar o vendedor.",
         variant: "destructive",
       });
-    },
-  });
-
-  const handleAddVendor = (vendorData: {
-    name: string;
-    cpfCnpj: string;
-    phone: string;
-    email: string;
-    storeId: string;
-  }) => {
-    addVendorMutation.mutate(vendorData);
+    }
   };
 
   return (
@@ -154,11 +154,7 @@ export default function Vendors() {
         totalRejected={totalRejected}
         totalSales={totalSales}
       />
-      {isLoading ? (
-        <div className="text-center py-8">Carregando vendedores...</div>
-      ) : (
-        <VendorsList vendors={vendors} />
-      )}
+      <VendorsList vendors={vendors} />
     </div>
   );
 }

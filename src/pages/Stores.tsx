@@ -1,69 +1,86 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import { StoresHeader } from "@/components/stores/StoresHeader";
 import { AddStoreDialog } from "@/components/stores/AddStoreDialog";
 import { StoresList } from "@/components/stores/StoresList";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface Store {
   id: string;
   name: string;
   region: string;
-  monthly_revenue: number;
+  monthlyRevenue: number;
   address: string;
 }
 
 export default function Stores() {
+  const [stores, setStores] = useState<Store[]>([]);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: stores = [], isLoading } = useQuery({
-    queryKey: ['stores'],
-    queryFn: async () => {
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
+  const fetchStores = async () => {
+    try {
       const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .order('created_at', { ascending: true });
-      
+        .from("stores")
+        .select("*")
+        .order("name");
+
       if (error) throw error;
-      return data as Store[];
-    },
-  });
 
-  const addStoreMutation = useMutation({
-    mutationFn: async (store: Omit<Store, "id" | "monthly_revenue">) => {
+      const formattedStores = data.map((store) => ({
+        id: store.id,
+        name: store.name,
+        region: store.region,
+        monthlyRevenue: Number(store.monthly_revenue) || 0,
+        address: store.address,
+      }));
+
+      setStores(formattedStores);
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+      toast({
+        title: "Erro ao carregar lojas",
+        description: "Não foi possível carregar as lojas.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddStore = async (store: Omit<Store, "id" | "monthlyRevenue">) => {
+    try {
       const { data, error } = await supabase
-        .from('stores')
-        .insert([{
+        .from("stores")
+        .insert({
           name: store.name,
           region: store.region,
           address: store.address,
           monthly_revenue: 0,
-        }])
+        })
         .select()
         .single();
-      
+
       if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stores'] });
+
+      await fetchStores();
+      
       toast({
         title: "Loja cadastrada",
-        description: "A loja foi adicionada com sucesso",
+        description: "A loja foi adicionada com sucesso.",
       });
-    },
-    onError: () => {
+
+      return data.id;
+    } catch (error) {
+      console.error("Error adding store:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível cadastrar a loja",
+        title: "Erro ao cadastrar loja",
+        description: "Não foi possível cadastrar a loja.",
         variant: "destructive",
       });
-    },
-  });
-
-  const handleAddStore = (store: Omit<Store, "id" | "monthly_revenue">) => {
-    addStoreMutation.mutate(store);
+      return "";
+    }
   };
 
   return (
@@ -79,14 +96,7 @@ export default function Stores() {
       </div>
 
       <StoresHeader totalStores={stores.length} />
-      {isLoading ? (
-        <div className="text-center py-8">Carregando lojas...</div>
-      ) : (
-        <StoresList stores={stores.map(s => ({
-          ...s,
-          monthlyRevenue: Number(s.monthly_revenue)
-        }))} />
-      )}
+      <StoresList stores={stores} />
     </div>
   );
 }
