@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,23 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Clock, 
   CheckCircle2, 
   XCircle, 
   FileText, 
   Search,
-  Filter,
   Eye,
   CalendarIcon,
   Store,
@@ -48,74 +41,12 @@ interface ValidationItem {
   imageUrl?: string;
   produtos: number;
   tempoEspera: string;
+  observation?: string;
+  rejectionReason?: string;
 }
 
-// Mock data
-const mockValidations: ValidationItem[] = [
-  {
-    id: "1",
-    receiptId: "NF-2024-001",
-    vendedor: "João Silva",
-    loja: "Loja Centro",
-    valor: "R$ 1.250,00",
-    data: "2024-01-15",
-    status: "pending",
-    imageUrl: "https://images.unsplash.com/photo-1554224311-beee460c201a?w=400",
-    produtos: 5,
-    tempoEspera: "2h",
-  },
-  {
-    id: "2",
-    receiptId: "NF-2024-002",
-    vendedor: "Maria Santos",
-    loja: "Loja Shopping",
-    valor: "R$ 850,00",
-    data: "2024-01-15",
-    status: "pending",
-    imageUrl: "https://images.unsplash.com/photo-1554224311-beee460c201a?w=400",
-    produtos: 3,
-    tempoEspera: "1h",
-  },
-  {
-    id: "3",
-    receiptId: "NF-2024-003",
-    vendedor: "Pedro Costa",
-    loja: "Loja Norte",
-    valor: "R$ 2.100,00",
-    data: "2024-01-14",
-    status: "approved",
-    imageUrl: "https://images.unsplash.com/photo-1554224311-beee460c201a?w=400",
-    produtos: 8,
-    tempoEspera: "30min",
-  },
-  {
-    id: "4",
-    receiptId: "NF-2024-004",
-    vendedor: "Ana Oliveira",
-    loja: "Loja Sul",
-    valor: "R$ 450,00",
-    data: "2024-01-14",
-    status: "rejected",
-    imageUrl: "https://images.unsplash.com/photo-1554224311-beee460c201a?w=400",
-    produtos: 2,
-    tempoEspera: "45min",
-  },
-  {
-    id: "5",
-    receiptId: "NF-2024-005",
-    vendedor: "Carlos Ferreira",
-    loja: "Loja Centro",
-    valor: "R$ 3.200,00",
-    data: "2024-01-13",
-    status: "approved",
-    imageUrl: "https://images.unsplash.com/photo-1554224311-beee460c201a?w=400",
-    produtos: 12,
-    tempoEspera: "20min",
-  },
-];
-
 export default function Validations() {
-  const [validations, setValidations] = useState<ValidationItem[]>(mockValidations);
+  const [validations, setValidations] = useState<ValidationItem[]>([]);
   const [selectedValidation, setSelectedValidation] = useState<ValidationItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
@@ -125,6 +56,64 @@ export default function Validations() {
   const [observation, setObservation] = useState("");
   const { toast } = useToast();
 
+  useEffect(() => {
+    fetchValidations();
+  }, []);
+
+  const fetchValidations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("receipts")
+        .select(`
+          *,
+          stores (name),
+          vendors (name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formattedValidations: ValidationItem[] = data.map((receipt) => ({
+        id: receipt.id,
+        receiptId: receipt.receipt_number,
+        vendedor: receipt.vendors?.name || "Desconhecido",
+        loja: receipt.stores?.name || "Desconhecida",
+        valor: new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(Number(receipt.total_value)),
+        data: receipt.receipt_date,
+        status: receipt.status as "pending" | "approved" | "rejected",
+        imageUrl: receipt.image_url || undefined,
+        produtos: receipt.products_count || 0,
+        tempoEspera: calculateWaitTime(receipt.created_at),
+        observation: receipt.observation || undefined,
+        rejectionReason: receipt.rejection_reason || undefined,
+      }));
+
+      setValidations(formattedValidations);
+    } catch (error) {
+      console.error("Error fetching validations:", error);
+      toast({
+        title: "Erro ao carregar validações",
+        description: "Não foi possível carregar as validações.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const calculateWaitTime = (createdAt: string) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diff = now.getTime() - created.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) return `${hours}h`;
+    if (minutes > 0) return `${minutes}min`;
+    return "agora";
+  };
+
   const stats = {
     pending: validations.filter((v) => v.status === "pending").length,
     approved: validations.filter((v) => v.status === "approved").length,
@@ -133,8 +122,7 @@ export default function Validations() {
   };
 
   const filteredValidations = validations.filter((v) => {
-    const matchesTab =
-      activeTab === "all" || v.status === activeTab;
+    const matchesTab = activeTab === "all" || v.status === activeTab;
     const matchesSearch =
       v.vendedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
       v.loja.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -144,23 +132,40 @@ export default function Validations() {
 
   const handleView = (validation: ValidationItem) => {
     setSelectedValidation(validation);
-    setObservation("");
-    setRejectionReason("");
+    setObservation(validation.observation || "");
+    setRejectionReason(validation.rejectionReason || "");
     setDialogOpen(true);
   };
 
-  const handleApprove = (id: string) => {
-    setValidations(validations.map((v) => 
-      v.id === id ? { ...v, status: "approved" as const } : v
-    ));
-    setDialogOpen(false);
-    toast({
-      title: "Validação aprovada",
-      description: "A validação foi aprovada com sucesso.",
-    });
+  const handleApprove = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("receipts")
+        .update({ 
+          status: "approved",
+          validated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await fetchValidations();
+      setDialogOpen(false);
+      toast({
+        title: "Validação aprovada",
+        description: "A validação foi aprovada com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error approving validation:", error);
+      toast({
+        title: "Erro ao aprovar",
+        description: "Não foi possível aprovar a validação.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleReject = (id: string) => {
+  const handleReject = async (id: string) => {
     if (!rejectionReason.trim()) {
       toast({
         title: "Motivo obrigatório",
@@ -169,28 +174,65 @@ export default function Validations() {
       });
       return;
     }
-    setValidations(validations.map((v) => 
-      v.id === id ? { ...v, status: "rejected" as const } : v
-    ));
-    setDialogOpen(false);
-    setRejectionReason("");
-    toast({
-      title: "Validação recusada",
-      description: "A validação foi recusada.",
-      variant: "destructive",
-    });
+
+    try {
+      const { error } = await supabase
+        .from("receipts")
+        .update({ 
+          status: "rejected",
+          rejection_reason: rejectionReason,
+          validated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await fetchValidations();
+      setDialogOpen(false);
+      setRejectionReason("");
+      toast({
+        title: "Validação recusada",
+        description: "A validação foi recusada.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error("Error rejecting validation:", error);
+      toast({
+        title: "Erro ao recusar",
+        description: "Não foi possível recusar a validação.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleBulkApprove = () => {
+  const handleBulkApprove = async () => {
     if (selectedIds.length === 0) return;
-    setValidations(validations.map((v) => 
-      selectedIds.includes(v.id) ? { ...v, status: "approved" as const } : v
-    ));
-    setSelectedIds([]);
-    toast({
-      title: "Validações aprovadas",
-      description: `${selectedIds.length} validações foram aprovadas.`,
-    });
+
+    try {
+      const { error } = await supabase
+        .from("receipts")
+        .update({ 
+          status: "approved",
+          validated_at: new Date().toISOString()
+        })
+        .in("id", selectedIds);
+
+      if (error) throw error;
+
+      await fetchValidations();
+      setSelectedIds([]);
+      toast({
+        title: "Validações aprovadas",
+        description: `${selectedIds.length} validações foram aprovadas.`,
+      });
+    } catch (error) {
+      console.error("Error bulk approving:", error);
+      toast({
+        title: "Erro ao aprovar em lote",
+        description: "Não foi possível aprovar as validações.",
+        variant: "destructive",
+      });
+    }
   };
 
   const toggleSelection = (id: string) => {
@@ -456,75 +498,99 @@ export default function Validations() {
                   <p className="font-semibold">{selectedValidation.loja}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Valor Total</Label>
-                  <p className="font-semibold text-lg">{selectedValidation.valor}</p>
-                </div>
-                <div>
                   <Label className="text-muted-foreground">Data</Label>
                   <p className="font-semibold">
                     {new Date(selectedValidation.data).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
+                <div>
+                  <Label className="text-muted-foreground">Valor Total</Label>
+                  <p className="font-semibold">{selectedValidation.valor}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Produtos</Label>
+                  <p className="font-semibold">{selectedValidation.produtos}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tempo de Espera</Label>
+                  <p className="font-semibold">{selectedValidation.tempoEspera}</p>
+                </div>
               </div>
 
               {selectedValidation.imageUrl && (
                 <div>
-                  <Label className="text-muted-foreground">Imagem da Nota Fiscal</Label>
-                  <img
-                    src={selectedValidation.imageUrl}
-                    alt="Nota Fiscal"
-                    className="w-full rounded-md border mt-2 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => window.open(selectedValidation.imageUrl, '_blank')}
+                  <Label className="text-muted-foreground mb-2 block">Imagem da Nota</Label>
+                  <img 
+                    src={selectedValidation.imageUrl} 
+                    alt="Nota fiscal" 
+                    className="w-full rounded-lg border"
                   />
                 </div>
               )}
 
-              <div>
-                <Label>Observações (opcional)</Label>
-                <Textarea
-                  placeholder="Adicione observações sobre esta validação..."
-                  value={observation}
-                  onChange={(e) => setObservation(e.target.value)}
-                  className="mt-2"
-                />
-              </div>
+              {selectedValidation.observation && (
+                <div>
+                  <Label className="text-muted-foreground">Observações</Label>
+                  <p className="text-sm mt-1">{selectedValidation.observation}</p>
+                </div>
+              )}
+
+              {selectedValidation.status === "rejected" && selectedValidation.rejectionReason && (
+                <div>
+                  <Label className="text-muted-foreground">Motivo da Recusa</Label>
+                  <p className="text-sm mt-1 text-destructive">{selectedValidation.rejectionReason}</p>
+                </div>
+              )}
 
               {selectedValidation.status === "pending" && (
-                <div>
-                  <Label>Motivo da Recusa *</Label>
-                  <Textarea
-                    placeholder="Obrigatório ao recusar a validação..."
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className="mt-2"
-                  />
+                <div className="space-y-4 pt-4 border-t">
+                  <div>
+                    <Label htmlFor="observation">Observações (opcional)</Label>
+                    <Textarea
+                      id="observation"
+                      placeholder="Adicione observações sobre esta validação..."
+                      value={observation}
+                      onChange={(e) => setObservation(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rejection">Motivo da Recusa</Label>
+                    <Textarea
+                      id="rejection"
+                      placeholder="Informe o motivo da recusa..."
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           )}
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Fechar
-            </Button>
-            {selectedValidation?.status === "pending" && (
-              <>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleReject(selectedValidation.id)}
-                >
-                  <XCircle className="h-4 w-4" />
-                  Recusar
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={() => handleApprove(selectedValidation.id)}
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Aprovar
-                </Button>
-              </>
-            )}
-          </DialogFooter>
+          {selectedValidation?.status === "pending" && (
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleReject(selectedValidation.id)}
+              >
+                <XCircle className="h-4 w-4" />
+                Recusar
+              </Button>
+              <Button
+                onClick={() => handleApprove(selectedValidation.id)}
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Aprovar
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>
