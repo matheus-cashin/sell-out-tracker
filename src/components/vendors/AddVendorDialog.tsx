@@ -36,9 +36,10 @@ interface AddVendorDialogProps {
   }) => void;
   initialOpen?: boolean;
   preSelectedStoreId?: string;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preSelectedStoreId = "" }: AddVendorDialogProps) {
+export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preSelectedStoreId = "", onOpenChange }: AddVendorDialogProps) {
   const [open, setOpen] = useState(initialOpen);
   const [name, setName] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
@@ -56,6 +57,11 @@ export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preS
       }
     }
   }, [initialOpen, preSelectedStoreId]);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    onOpenChange?.(newOpen);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,17 +93,17 @@ export function AddVendorDialog({ stores, onAddVendor, initialOpen = false, preS
     setPhone("");
     setEmail("");
     setStoreId("");
-    setOpen(false);
+    handleOpenChange(false);
   };
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button onClick={() => handleOpenChange(true)}>
         <Plus className="h-4 w-4" />
         Adicionar Vendedor
       </Button>
       
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Vendedor</DialogTitle>

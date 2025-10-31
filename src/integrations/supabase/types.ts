@@ -192,6 +192,7 @@ export type Database = {
           id: string
           monthly_revenue: number | null
           name: string
+          phone: string | null
           region: string
           updated_at: string
         }
@@ -201,6 +202,7 @@ export type Database = {
           id?: string
           monthly_revenue?: number | null
           name: string
+          phone?: string | null
           region: string
           updated_at?: string
         }
@@ -210,6 +212,7 @@ export type Database = {
           id?: string
           monthly_revenue?: number | null
           name?: string
+          phone?: string | null
           region?: string
           updated_at?: string
         }

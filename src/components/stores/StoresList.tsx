@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MapPin, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { StoreDetailsDialog } from "./StoreDetailsDialog";
 import {
   Table,
   TableBody,
@@ -45,13 +46,16 @@ interface Store {
 interface StoresListProps {
   stores: Store[];
   onDeleteStore: (storeId: string) => Promise<void>;
+  onOpenVendorDialog: (storeId: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function StoresList({ stores, onDeleteStore }: StoresListProps) {
+export function StoresList({ stores, onDeleteStore, onOpenVendorDialog }: StoresListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const totalPages = Math.ceil(stores.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -93,7 +97,14 @@ export function StoresList({ stores, onDeleteStore }: StoresListProps) {
           </TableHeader>
           <TableBody>
             {currentStores.map((store) => (
-              <TableRow key={store.id}>
+              <TableRow 
+                key={store.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => {
+                  setSelectedStore(store);
+                  setDetailsOpen(true);
+                }}
+              >
                 <TableCell className="font-medium">{store.id}</TableCell>
                 <TableCell className="font-medium">{store.name}</TableCell>
                 <TableCell>{store.region}</TableCell>
@@ -108,7 +119,7 @@ export function StoresList({ stores, onDeleteStore }: StoresListProps) {
                     Ver no Maps
                   </Button>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -183,6 +194,13 @@ export function StoresList({ stores, onDeleteStore }: StoresListProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <StoreDetailsDialog
+        store={selectedStore}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        onOpenVendorDialog={onOpenVendorDialog}
+      />
     </div>
   );
 }

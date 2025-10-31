@@ -163,8 +163,8 @@ export default function Stores() {
           }
         }}
         initialOpen={vendorDialogOpen}
-        onOpenChange={setVendorDialogOpen}
         preSelectedStoreId={selectedStoreId}
+        onOpenChange={setVendorDialogOpen}
       />
     </div>
   );
