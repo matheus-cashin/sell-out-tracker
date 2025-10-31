@@ -7,12 +7,25 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { ValidationPanel } from "@/components/dashboard/ValidationPanel";
 import { ProductPerformanceList } from "@/components/dashboard/ProductPerformanceList";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const products = [
+  { id: "all", name: "Todos os Produtos" },
+  { id: "1", name: "Produto Premium Alpha" },
+  { id: "2", name: "Produto Elite Beta" },
+  { id: "3", name: "Produto Standard Gamma" },
+  { id: "4", name: "Produto Plus Delta" },
+  { id: "5", name: "Produto Basic Epsilon" },
+  { id: "6", name: "Produto Entry Zeta" },
+  { id: "7", name: "Produto Starter Eta" },
+];
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   });
+  const [selectedProduct, setSelectedProduct] = useState<string>("all");
 
   return (
     <div className="space-y-6">
@@ -23,7 +36,21 @@ export default function Dashboard() {
             Visão geral das vendas e validações
           </p>
         </div>
-        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+        <div className="flex gap-3">
+          <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+            <SelectTrigger className="w-[280px]">
+              <SelectValue placeholder="Selecione um produto" />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map((product) => (
+                <SelectItem key={product.id} value={product.id}>
+                  {product.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
