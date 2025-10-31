@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { StoresHeader } from "@/components/stores/StoresHeader";
 import { AddStoreDialog } from "@/components/stores/AddStoreDialog";
 import { StoresList } from "@/components/stores/StoresList";
+import { AddVendorDialog } from "@/components/vendors/AddVendorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +16,8 @@ interface Store {
 
 export default function Stores() {
   const [stores, setStores] = useState<Store[]>([]);
+  const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -121,7 +124,48 @@ export default function Stores() {
       </div>
 
       <StoresHeader totalStores={stores.length} />
-      <StoresList stores={stores} onDeleteStore={handleDeleteStore} />
+      <StoresList 
+        stores={stores} 
+        onDeleteStore={handleDeleteStore}
+        onOpenVendorDialog={(storeId) => {
+          setSelectedStoreId(storeId);
+          setVendorDialogOpen(true);
+        }}
+      />
+      
+      <AddVendorDialog
+        stores={stores.map(s => ({ id: s.id, name: s.name }))}
+        onAddVendor={async (vendor) => {
+          try {
+            const { error } = await supabase
+              .from("vendors")
+              .insert({
+                name: vendor.name,
+                cpf_cnpj: vendor.cpfCnpj,
+                phone: vendor.phone,
+                email: vendor.email,
+                store_id: vendor.storeId,
+              });
+
+            if (error) throw error;
+
+            toast({
+              title: "Vendedor cadastrado",
+              description: "O vendedor foi adicionado com sucesso.",
+            });
+          } catch (error) {
+            console.error("Error adding vendor:", error);
+            toast({
+              title: "Erro ao cadastrar vendedor",
+              description: "Não foi possível cadastrar o vendedor.",
+              variant: "destructive",
+            });
+          }
+        }}
+        initialOpen={vendorDialogOpen}
+        onOpenChange={setVendorDialogOpen}
+        preSelectedStoreId={selectedStoreId}
+      />
     </div>
   );
 }
