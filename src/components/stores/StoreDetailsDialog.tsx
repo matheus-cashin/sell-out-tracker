@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
-import { CalendarIcon, UserPlus } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { CalendarIcon, UserPlus, Search } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -34,9 +34,85 @@ export function StoreDetailsDialog({ store, open, onOpenChange, onOpenVendorDial
   const [phone, setPhone] = useState("");
   const [campaignStart, setCampaignStart] = useState<Date>();
   const [campaignEnd, setCampaignEnd] = useState<Date>();
-  const [isValueGoal, setIsValueGoal] = useState(true);
+  const [goalType, setGoalType] = useState<"value" | "product" | "vendor">("value");
   const [goalValue, setGoalValue] = useState("");
-  const [goalProducts, setGoalProducts] = useState("");
+  
+  // Product goal state
+  const [products, setProducts] = useState<any[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [productGoals, setProductGoals] = useState<Record<string, number>>({});
+  
+  // Vendor goal state
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [vendorGoals, setVendorGoals] = useState<Record<string, number>>({});
+  const [applyToAllValue, setApplyToAllValue] = useState("");
+
+  useEffect(() => {
+    if (open && goalType === "product") {
+      fetchProducts();
+    }
+  }, [open, goalType]);
+
+  useEffect(() => {
+    if (open && goalType === "vendor" && store) {
+      fetchVendors();
+    }
+  }, [open, goalType, store]);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("active", true)
+        .order("name");
+      
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+
+  const fetchVendors = async () => {
+    if (!store) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("*")
+        .eq("store_id", store.id)
+        .order("name");
+      
+      if (error) throw error;
+      setVendors(data || []);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+    }
+  };
+
+  const handleApplyToAll = () => {
+    const value = parseFloat(applyToAllValue);
+    if (isNaN(value) || value <= 0) {
+      toast({
+        title: "Valor inválido",
+        description: "Insira um valor válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newGoals: Record<string, number> = {};
+    vendors.forEach(vendor => {
+      newGoals[vendor.id] = value;
+    });
+    setVendorGoals(newGoals);
+    setApplyToAllValue("");
+  };
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(productSearch.toLowerCase())
+  );
 
   const handleSaveSettings = async () => {
     if (!store) return;
@@ -73,14 +149,37 @@ export function StoreDetailsDialog({ store, open, onOpenChange, onOpenVendorDial
       return;
     }
 
-    const goalAmount = isValueGoal ? parseFloat(goalValue) : parseInt(goalProducts);
-    if (isNaN(goalAmount) || goalAmount <= 0) {
-      toast({
-        title: "Meta inválida",
-        description: "Insira um valor válido para a meta.",
-        variant: "destructive",
-      });
-      return;
+    // Validate based on goal type
+    if (goalType === "value") {
+      const value = parseFloat(goalValue);
+      if (isNaN(value) || value <= 0) {
+        toast({
+          title: "Meta inválida",
+          description: "Insira um valor válido para a meta.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (goalType === "product") {
+      const hasGoals = Object.values(productGoals).some(qty => qty > 0);
+      if (!hasGoals) {
+        toast({
+          title: "Meta inválida",
+          description: "Selecione pelo menos um produto com quantidade maior que zero.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (goalType === "vendor") {
+      const hasGoals = Object.values(vendorGoals).some(value => value > 0);
+      if (!hasGoals) {
+        toast({
+          title: "Meta inválida",
+          description: "Defina metas para pelo menos um vendedor.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     try {
@@ -164,6 +263,7 @@ export function StoreDetailsDialog({ store, open, onOpenChange, onOpenVendorDial
                       selected={campaignStart}
                       onSelect={setCampaignStart}
                       initialFocus
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
@@ -190,25 +290,42 @@ export function StoreDetailsDialog({ store, open, onOpenChange, onOpenVendorDial
                       selected={campaignEnd}
                       onSelect={setCampaignEnd}
                       initialFocus
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="goal-type">Meta por Valor</Label>
-              <Switch
-                id="goal-type"
-                checked={isValueGoal}
-                onCheckedChange={setIsValueGoal}
-              />
-              <Label htmlFor="goal-type">Meta por Produto</Label>
+            <div className="space-y-3">
+              <Label>Tipo de Meta</Label>
+              <RadioGroup value={goalType} onValueChange={(value: any) => setGoalType(value)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="value" id="value" />
+                  <Label htmlFor="value" className="font-normal cursor-pointer">
+                    Meta por Valor Total da Loja
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="product" id="product" />
+                  <Label htmlFor="product" className="font-normal cursor-pointer">
+                    Meta por Produto
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="vendor" id="vendor" />
+                  <Label htmlFor="vendor" className="font-normal cursor-pointer">
+                    Meta por Vendedor
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
 
-            {isValueGoal ? (
+            {goalType === "value" && (
               <div className="space-y-2">
-                <Label htmlFor="goal-value">Meta em Valor (R$)</Label>
+                <Label htmlFor="goal-value">
+                  Valor Total da Meta (R$) - Valor esperado de vendas para toda a loja
+                </Label>
                 <Input
                   id="goal-value"
                   type="number"
@@ -217,20 +334,123 @@ export function StoreDetailsDialog({ store, open, onOpenChange, onOpenVendorDial
                   onChange={(e) => setGoalValue(e.target.value)}
                 />
               </div>
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="goal-products">Meta em Produtos (quantidade)</Label>
-                <Input
-                  id="goal-products"
-                  type="number"
-                  placeholder="0"
-                  value={goalProducts}
-                  onChange={(e) => setGoalProducts(e.target.value)}
-                />
+            )}
+
+            {goalType === "product" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="product-search">Buscar Produtos</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="product-search"
+                      placeholder="Digite o nome do produto..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                  {filteredProducts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhum produto encontrado
+                    </p>
+                  ) : (
+                    <div className="divide-y">
+                      {filteredProducts.map((product) => (
+                        <div key={product.id} className="p-3 flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">{product.sector}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor={`qty-${product.id}`} className="text-xs whitespace-nowrap">
+                              Quantidade:
+                            </Label>
+                            <Input
+                              id={`qty-${product.id}`}
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={productGoals[product.id] || ""}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 0;
+                                setProductGoals(prev => ({
+                                  ...prev,
+                                  [product.id]: value
+                                }));
+                              }}
+                              className="w-20"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            <Button onClick={handleSaveCampaign}>Salvar Campanha</Button>
+            {goalType === "vendor" && (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Valor para aplicar a todos"
+                    value={applyToAllValue}
+                    onChange={(e) => setApplyToAllValue(e.target.value)}
+                  />
+                  <Button onClick={handleApplyToAll} variant="outline">
+                    Aplicar a Todos
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                  {vendors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhum vendedor cadastrado para esta loja
+                    </p>
+                  ) : (
+                    <div className="divide-y">
+                      {vendors.map((vendor) => (
+                        <div key={vendor.id} className="p-3 flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{vendor.name}</p>
+                            <p className="text-xs text-muted-foreground">{vendor.phone || "Sem telefone"}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor={`vendor-${vendor.id}`} className="text-xs whitespace-nowrap">
+                              Meta (R$):
+                            </Label>
+                            <Input
+                              id={`vendor-${vendor.id}`}
+                              type="number"
+                              min="0"
+                              placeholder="0.00"
+                              value={vendorGoals[vendor.id] || ""}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                setVendorGoals(prev => ({
+                                  ...prev,
+                                  [vendor.id]: value
+                                }));
+                              }}
+                              className="w-28"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Button onClick={handleSaveCampaign} className="w-full">
+              Salvar Campanha
+            </Button>
           </TabsContent>
         </Tabs>
       </DialogContent>
