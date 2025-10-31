@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { VendorsHeader } from "@/components/vendors/VendorsHeader";
 import { VendorsList } from "@/components/vendors/VendorsList";
 import { AddVendorDialog } from "@/components/vendors/AddVendorDialog";
+import { ImportVendorsDialog } from "@/components/vendors/ImportVendorsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,6 +30,7 @@ export default function Vendors() {
   // Estado para controlar a abertura do modal vindo de outra página
   const [initialModalOpen, setInitialModalOpen] = useState(false);
   const [preSelectedStore, setPreSelectedStore] = useState("");
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchStores();
@@ -153,8 +155,14 @@ export default function Vendors() {
         totalVendors={vendors.length}
         totalRejected={totalRejected}
         totalSales={totalSales}
+        onImportVendors={() => setIsImportDialogOpen(true)}
       />
       <VendorsList vendors={vendors} />
+      
+      <ImportVendorsDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+      />
     </div>
   );
 }
