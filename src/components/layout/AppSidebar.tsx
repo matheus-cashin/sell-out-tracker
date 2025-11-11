@@ -48,7 +48,7 @@ export function AppSidebar() {
       <SidebarContent>
         <div className="p-6 pb-4">
           {!isCollapsed && (
-            <h2 className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h2 className="text-lg font-bold text-sidebar-foreground">
               Cashin Tracker
             </h2>
           )}
